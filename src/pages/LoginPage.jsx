@@ -13,12 +13,44 @@ export default function LoginPage({ onLogin, onGoRegister }) {
       setError("아이디와 비밀번호를 모두 입력해주세요.");
       return;
     }
-    setError("현재 서버 연결이 비활성화되어 있습니다.");
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("http://18.140.244.182:8080/users/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          loginId: loginId.trim(),
+          password: password.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "로그인에 실패했습니다.");
+      }
+
+      const user = await res.json();
+      onLogin(user);
+    } catch (err) {
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        setError("서버에 연결할 수 없습니다.");
+      } 
+      else {
+        setError(err.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
+
+        {/* 상단 로고 */}
         <div className="auth-logo">
           <div className="auth-logo-icon">
             <BookOpen size={26} color="#ffa042" />
@@ -58,10 +90,12 @@ export default function LoginPage({ onLogin, onGoRegister }) {
           </button>
         </form>
 
+        {/* 구분선 */}
         <div className="divider">
           <span>계정이 없으신가요?</span>
         </div>
 
+        {/* 회원가입 버튼 */}
         <button type="button" className="btn-outline" onClick={onGoRegister}>
           <UserPlus size={17} />
           회원가입

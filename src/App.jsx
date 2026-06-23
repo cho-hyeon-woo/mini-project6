@@ -16,11 +16,13 @@ const readSessionUser = () => {
   try {
     const storedUser = sessionStorage.getItem(CURRENT_USER_SESSION_KEY);
     if (!storedUser) return null;
+
     const user = JSON.parse(storedUser);
     if (!user || user.userId == null) {
       sessionStorage.removeItem(CURRENT_USER_SESSION_KEY);
       return null;
     }
+
     return user;
   } catch {
     sessionStorage.removeItem(CURRENT_USER_SESSION_KEY);
@@ -37,6 +39,8 @@ const clearSessionUser = () => {
 };
 
 export default function App() {
+  const dbAddress = "http://18.140.244.182:8080/books";
+
   const [currentUser, setCurrentUser] = useState(() => readSessionUser());
   const [currentMenu, setCurrentMenu] = useState("home");
   const [books, setBooks] = useState([]);
@@ -68,15 +72,65 @@ export default function App() {
   );
 
   const fetchBooks = async () => {
-    // 백엔드 연결 임시 비활성화
-    setBooks([]);
-    setRandomBook(null);
+    try {
+      const res = await fetch(dbAddress);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || "도서 목록을 불러오지 못했습니다.");
+      }
+      const data = await res.json();
+      setBooks(data);
+
+      if (data.length > 0) {
+        const oldestBook = [...data].sort((a, b) => a.id - b.id)[0];
+
+        try {
+          const recRes = await fetch("http://18.140.244.182:8080/stars/recommend");
+          
+          if (recRes.status === 200) {
+            const bestBookId = await recRes.json();
+            const bestBook = data.find(b => b.id === bestBookId);
+            setRandomBook(bestBook || oldestBook);
+          } else {
+            setRandomBook(oldestBook);
+          }
+        } catch (e) {
+          console.error("추천 도서 랭킹을 가져오지 못했습니다. 기본값으로 대체합니다.", e);
+          setRandomBook(oldestBook);
+        }
+      } else {
+        setRandomBook(null);
+      }
+    } catch (err) {
+      console.error("데이터 로딩 실패:", err);
+      if (err.message === "Failed to fetch" || err.name === "TypeError") {
+        toast.error("서버와 연결할 수 없습니다.");
+      } else {
+        toast.error(err.message);
+      }
+    }
   };
 
   useEffect(() => { fetchBooks(); }, []);
 
   const handleDelete = async (id) => {
-    toast.info("현재 서버 연결이 비활성화되어 있습니다.");
+    if (window.confirm("정말 이 책을 삭제하시겠습니까?")) {
+      try {
+        const res = await fetch(`${dbAddress}/${id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+
+          throw new Error(errorData.message || "책 삭제에 실패했습니다.")
+        }
+        setSelectedBook(null);
+        setDetailViewSource(null);
+        if (randomBook?.id === id) setRandomBook(null);
+        fetchBooks();
+        toast.success("도서가 삭제되었습니다.");
+      } catch (err) {
+        toast.error(err.message);
+      }
+    }
   };
 
   const startEdit = () => {
@@ -85,11 +139,41 @@ export default function App() {
   };
 
   const handleUpdateAccount = async () => {
-    toast.info("현재 서버 연결이 비활성화되어 있습니다.");
+    try {
+      const res = await fetch(`http://18.140.244.182:8080/users/${currentUser.userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: accountName, password: accountPassword }),
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+
+        throw new Error(errorData.message || "회원 정보 수정에 실패했습니다.");
+      }
+      const updated = await res.json();
+      setCurrentUser(updated);
+      saveSessionUser(updated);
+      setShowAccountEdit(false);
+      toast.success("회원 정보가 수정되었습니다.");
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const handleDeleteAccount = async () => {
-    toast.info("현재 서버 연결이 비활성화되어 있습니다.");
+    if (!window.confirm("정말 회원 탈퇴하시겠습니까? 탈퇴 시 복구할 수 없습니다.")) return;
+    try {
+      const res = await fetch(`http://18.140.244.182:8080/users/${currentUser.userId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("회원 탈퇴에 실패했습니다.");
+      setCurrentUser(null);
+      clearSessionUser();
+      setShowAccountEdit(false);
+      setCurrentMenu("home");
+      handleCloseDetail();
+      toast.success("회원 탈퇴가 완료되었습니다.");
+    } catch (err) {
+      toast.error(err.message || "회원 탈퇴에 실패했습니다.");
+    }
   };
 
   const handleOpenDetail = (book, source) => {
@@ -191,6 +275,7 @@ export default function App() {
             }}
           />
 
+          {/* 로그인 화면 */}
           {currentMenu === "login" && (
             <LoginPage
               onLogin={(user) => {
@@ -203,6 +288,7 @@ export default function App() {
             />
           )}
 
+          {/* 회원가입 화면 */}
           {currentMenu === "signup" && (
             <SignupPage
               onSignupSuccess={(user) => {
@@ -215,8 +301,11 @@ export default function App() {
             />
           )}
 
+          {/* 홈 화면 */}
           {currentMenu === "home" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "35px", width: "100%" }}>
+
+              {/* 이 달의 추천 도서 */}
               {randomBook && !searchQuery && (
                 <section className="recommend-section section-card" style={{ borderLeft: "5px solid #d97706", background: "rgba(255,255,255,0.4)" }}>
                   <h3 className="section-title" style={{ color: "#444", letterSpacing: "-0.03em" }}>이 달의 추천 도서</h3>
@@ -232,7 +321,7 @@ export default function App() {
                         <span style={{ fontWeight: "700", color: "#444" }}>{randomBook.author}</span>
                       </p>
                       <div style={{ position: "relative", padding: "0 10px", margin: "10px 0 20px 0", color: "#444", fontSize: "14px", lineHeight: "1.6", display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden", textOverflow: "ellipsis" }}>
-                        " {randomBook.content} "
+                        “ {randomBook.content} ”
                       </div>
                       <span className="detail-link" style={{ cursor: "pointer", color: "#b45309", fontSize: "13px", fontWeight: "700", borderBottom: "1px solid #b45309" }} onClick={() => handleOpenDetail(randomBook, "recommend")}>
                         자세히 들여다보기 →
@@ -257,6 +346,7 @@ export default function App() {
                 </section>
               )}
 
+              {/* 도서 목록 */}
               <section className="book-list-section section-card">
                 <h3 className="section-title" style={{ color: "#292524", display: "flex", alignItems: "center", gap: "6px" }}>
                   <BookOpen size={20} aria-hidden="true" style={{ color: "#d97706" }} />
@@ -266,6 +356,7 @@ export default function App() {
                   {filteredBooks.map((book, index) => {
                     const pastelColors = ["#f5f5f4", "#f4f1ea", "#edf2f4", "#f6eff2", "#eff4f0"];
                     const selectColor = pastelColors[index % pastelColors.length];
+
                     return (
                       <div
                         key={book.id}
@@ -308,6 +399,7 @@ export default function App() {
                   })}
                 </div>
                 {filteredBooks.length === 0 && <p className="book-empty">검색된 도서가 없습니다.</p>}
+
                 <div ref={listDetailRef}>
                   <AnimatePresence mode="wait">
                     {selectedBook && detailViewSource === "list" && (
@@ -327,10 +419,11 @@ export default function App() {
             </div>
           )}
 
+          {/* 도서 등록/수정 페이지 */}
           <div style={{ display: currentMenu === "register" ? "block" : "none" }}>
             <RegisterPage
               key={registerPageSessionKey}
-              dbAddress=""
+              dbAddress={dbAddress}
               currentUser={currentUser}
               selectedBook={selectedBook}
               isEditing={isEditing}
@@ -351,6 +444,7 @@ export default function App() {
             />
           </div>
 
+          {/* 마이 페이지 */}
           {currentMenu === "mypage" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "15px", width: "100%" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -382,6 +476,7 @@ export default function App() {
                       <h2>계정 관리</h2>
                       <p>회원 정보를 수정하거나 탈퇴할 수 있어요</p>
                     </div>
+
                     <div className="form-group">
                       <label className="form-label">이름</label>
                       <input
@@ -400,6 +495,7 @@ export default function App() {
                         onChange={(e) => setAccountPassword(e.target.value)}
                       />
                     </div>
+
                     <div style={{ display: "flex", gap: "10px" }}>
                       <button type="button" className="btn-primary" style={{ flex: 1, marginBottom: 0 }} onClick={handleUpdateAccount}>
                         수정하기
@@ -415,6 +511,7 @@ export default function App() {
               {!showAccountEdit && (
                 <>
                   <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>등록한 도서와 북마크한 도서를 확인하고 관리할 수 있습니다.</p>
+
                   <BookDetail
                     selectedBook={selectedBook}
                     onStartEdit={startEdit}
