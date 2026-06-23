@@ -1,0 +1,18 @@
+version: 0.0
+os: linux
+
+files:
+  - source: /dist/
+    destination: /var/www/html/frontend
+
+permissions:
+  - object: /var/www/html/frontend
+    pattern: "**"
+    owner: ec2-user
+    group: ec2-user
+
+hooks:
+  BeforeInstall:
+    - location: scripts/clean_up.sh
+      timeout: 120
+      runas: root
