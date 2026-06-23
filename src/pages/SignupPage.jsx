@@ -29,50 +29,12 @@ export default function SignupPage({ onSignupSuccess, onGoLogin }) {
       return;
     }
 
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const checkRes = await fetch(`http://localhost:8080/users?loginId=${loginId.trim()}`);
-      const existing = await checkRes.json();
-      if (existing.length > 0) {
-        setError("이미 사용 중인 아이디입니다.");
-        return;
-      }
-
-      const res = await fetch("http://localhost:8080/users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          loginId: loginId.trim(),
-          password: password.trim(),
-          name: name.trim(),
-        }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "회원가입에 실패했습니다.");
-      }
-
-      const newUser = await res.json();
-      onSignupSuccess(newUser);
-    } catch (err) {
-      if (err.message === "Failed to fetch" || err.name === "TypeError") {
-        setError("서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요. 🔌");
-      } else {
-        setError(err.message);
-      }
-    } finally {
-      setIsLoading(false);
-    }
+    setError("현재 서버 연결이 비활성화되어 있습니다.");
   };
 
   return (
     <div className="auth-wrapper">
       <div className="auth-card">
-
-        {/* 상단 로고 */}
         <div className="auth-logo">
           <div className="auth-logo-icon">
             <BookOpen size={26} color="#ffa042" />
@@ -137,7 +99,6 @@ export default function SignupPage({ onSignupSuccess, onGoLogin }) {
           </button>
         </form>
 
-        {/* 로그인으로 돌아가기 */}
         <button type="button" className="btn-ghost" onClick={onGoLogin}>
           <ArrowLeft size={15} />
           로그인으로 돌아가기
