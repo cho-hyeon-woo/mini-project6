@@ -43,7 +43,7 @@ export default function BookDetail({
 
   const fetchBookmarkedBooksList = async () => {
     try {
-      const res = await fetch(`http://18.140.244.182:8080/bookmarks/my?userId=${currentUser.userId}`);
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/bookmarks/my?userId=${currentUser.userId}`);
       if (res.ok) {
         const data = await res.json();
         setBookmarkedBooks(data);
@@ -56,7 +56,7 @@ export default function BookDetail({
   const fetchBookmarkStatus = async () => {
     if (!currentUser || !selectedBook) return;
     try {
-      const res = await fetch(`http://18.140.244.182:8080/bookmarks/status?userId=${currentUser.userId}&bookId=${selectedBook.id}`);
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/bookmarks/status?userId=${currentUser.userId}&bookId=${selectedBook.id}`);
       if (res.ok) {
         const status = await res.json();
         setIsBookmarked(status);
@@ -69,7 +69,7 @@ export default function BookDetail({
   const fetchAverageRating = async () => {
     if (!selectedBook) return;
     try {
-      const res = await fetch(`http://18.140.244.182:8080/stars/book/${selectedBook.id}/average`);
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/stars/book/${selectedBook.id}/average`);
       if (res.ok) {
         const avg = await res.json();
         setAverageRating(avg);
@@ -82,7 +82,7 @@ export default function BookDetail({
   const fetchComments = async () => {
     if (!selectedBook) return;
     try {
-      const res = await fetch(`http://18.140.244.182:8080/comments/book/${selectedBook.id}`);
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/comments/book/${selectedBook.id}`);
       if (res.ok) {
         const data = await res.json();
         setComments(data);
@@ -98,7 +98,7 @@ export default function BookDetail({
       return;
     }
     try {
-      const res = await fetch(`http://18.140.244.182:8080/bookmarks/bookmarking?userId=${currentUser.userId}&bookId=${selectedBook.id}`, { method: "POST" });
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/bookmarks/bookmarking?userId=${currentUser.userId}&bookId=${selectedBook.id}`, { method: "POST" });
       if (res.ok) {
         setIsBookmarked(!isBookmarked);
         toast.success(!isBookmarked ? "북마크에 추가되었습니다." : "북마크가 취소되었습니다.");
@@ -115,7 +115,7 @@ export default function BookDetail({
       return;
     }
     try {
-      const res = await fetch(`http://18.140.244.182:8080/stars/rate?userId=${currentUser.userId}&bookId=${selectedBook.id}&score=${score}`, { method: "POST" });
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/stars/rate?userId=${currentUser.userId}&bookId=${selectedBook.id}&score=${score}`, { method: "POST" });
       if (res.ok) {
         toast.success(`${score}점을 주셨습니다!`);
         fetchAverageRating();
@@ -134,7 +134,7 @@ export default function BookDetail({
     if (!newComment.trim()) return;
 
     try {
-      const res = await fetch(`http://18.140.244.182:8080/comments/add?userId=${currentUser.userId}&bookId=${selectedBook.id}&content=${encodeURIComponent(newComment)}`, { method: "POST" });
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/comments/add?userId=${currentUser.userId}&bookId=${selectedBook.id}&content=${encodeURIComponent(newComment)}`, { method: "POST" });
       if (res.ok) {
         setNewComment("");
         fetchComments();
@@ -159,7 +159,7 @@ export default function BookDetail({
     if (!editCommentContent.trim()) return;
 
     try {
-      const res = await fetch(`http://18.140.244.182:8080/comments/${commentId}`, {
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/comments/${commentId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content: editCommentContent }),
@@ -179,7 +179,7 @@ export default function BookDetail({
 
   const handleCommentDelete = async (commentId) => {
     try {
-      const res = await fetch(`http://18.140.244.182:8080/comments/${commentId}`, { method: "DELETE" });
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/comments/${commentId}`, { method: "DELETE" });
       if (res.ok) {
         fetchComments();
         toast.success("댓글이 삭제되었습니다.");

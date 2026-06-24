@@ -39,7 +39,7 @@ const clearSessionUser = () => {
 };
 
 export default function App() {
-  const dbAddress = "http://18.140.244.182:8080/books";
+  const dbAddress = "http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/books";
 
   const [currentUser, setCurrentUser] = useState(() => readSessionUser());
   const [currentMenu, setCurrentMenu] = useState("home");
@@ -85,7 +85,7 @@ export default function App() {
         const oldestBook = [...data].sort((a, b) => a.id - b.id)[0];
 
         try {
-          const recRes = await fetch("http://18.140.244.182:8080/stars/recommend");
+          const recRes = await fetch("http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/stars/recommend");
           
           if (recRes.status === 200) {
             const bestBookId = await recRes.json();
@@ -140,7 +140,7 @@ export default function App() {
 
   const handleUpdateAccount = async () => {
     try {
-      const res = await fetch(`http://18.140.244.182:8080/users/${currentUser.userId}`, {
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/users/${currentUser.userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: accountName, password: accountPassword }),
@@ -163,7 +163,7 @@ export default function App() {
   const handleDeleteAccount = async () => {
     if (!window.confirm("정말 회원 탈퇴하시겠습니까? 탈퇴 시 복구할 수 없습니다.")) return;
     try {
-      const res = await fetch(`http://18.140.244.182:8080/users/${currentUser.userId}`, { method: "DELETE" });
+      const res = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/users/${currentUser.userId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("회원 탈퇴에 실패했습니다.");
       setCurrentUser(null);
       clearSessionUser();
