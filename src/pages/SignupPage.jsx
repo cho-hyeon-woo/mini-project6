@@ -33,14 +33,14 @@ export default function SignupPage({ onSignupSuccess, onGoLogin }) {
     setError("");
 
     try {
-      const checkRes = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/users?loginId=${loginId.trim()}`);
+      const checkRes = await fetch(`http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com:8080/users?loginId=${loginId.trim()}`);
       const existing = await checkRes.json();
       if (existing.length > 0) {
         setError("이미 사용 중인 아이디입니다.");
         return;
       }
 
-      const res = await fetch("http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com/users", {
+      const res = await fetch("http://user94-ALB-1616828866.ap-southeast-1.elb.amazonaws.com:8080/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
